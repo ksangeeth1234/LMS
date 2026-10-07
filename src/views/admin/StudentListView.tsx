@@ -18,13 +18,14 @@ import {
   RefreshCw,
   Copy,
   Check,
+  DollarSign,
 } from "lucide-react";
 import { Badge } from "@/views/components/Badge";
 import { Button } from "@/views/components/Button";
 import { Input } from "@/views/components/Input";
 import { Modal } from "@/views/components/Modal";
 import { Alert } from "@/views/components/Alert";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { Student } from "@/models/types";
 
 export const StudentListView: React.FC = () => {
@@ -40,7 +41,7 @@ export const StudentListView: React.FC = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Edit form state
-  const [editForm, setEditForm] = useState<Partial<Student>>({});
+  const [editForm, setEditForm] = useState<Partial<Student & { monthlyFee?: number }>>({});
   const [newPassword, setNewPassword] = useState("");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -126,7 +127,7 @@ export const StudentListView: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setActionMessage("Student details updated successfully.");
+        setActionMessage("Student details and fee updated successfully.");
         setIsEditModalOpen(false);
         fetchStudents();
         setTimeout(() => setActionMessage(null), 3000);
@@ -153,6 +154,7 @@ export const StudentListView: React.FC = () => {
       address: student.address,
       email: student.email || "",
       course_class: student.course_class,
+      monthly_fee: student.monthly_fee || 4500,
     });
     setIsEditModalOpen(true);
   };
@@ -171,20 +173,20 @@ export const StudentListView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             Student Management
           </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            View, search, edit student details, manage account status, and view login credentials.
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            View, search, edit student information, manage tutor-decided tuition fees, and toggle accounts.
           </p>
         </div>
 
-        <Link href="/admin/students/register">
-          <Button variant="primary" leftIcon={<UserPlus className="w-4 h-4" />}>
+        <Link href="/admin/students/register" className="w-full sm:w-auto">
+          <Button variant="primary" className="w-full sm:w-auto" leftIcon={<UserPlus className="w-4 h-4" />}>
             Register New Student
           </Button>
         </Link>
@@ -199,10 +201,10 @@ export const StudentListView: React.FC = () => {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-white p-4 shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
         <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2">
           <Input
-            placeholder="Search by Name, Student ID, NIC, or Phone..."
+            placeholder="Search Name, ID, NIC, Phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             leftIcon={<Search className="w-4 h-4" />}
@@ -217,7 +219,7 @@ export const StudentListView: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
@@ -236,8 +238,72 @@ export const StudentListView: React.FC = () => {
         </div>
       </div>
 
-      {/* Students Data Table */}
-      <div className="rounded-3xl bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+      {/* Mobile Card List (Visible on Phone Screens) */}
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {students.map((student) => (
+          <div
+            key={student.id}
+            className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 space-y-4"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">
+                  {student.student_id}
+                </span>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  {student.full_name}
+                </h3>
+                <span className="text-xs text-slate-400 font-mono">NIC: {student.nic}</span>
+              </div>
+              <Badge status={student.is_active ? "ACTIVE" : "INACTIVE"} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-850 p-3 rounded-xl">
+              <div>
+                <span className="text-slate-400 block font-semibold">Tutor Monthly Fee:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(student.monthly_fee || 4500)}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Phone:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{student.student_phone}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Username:</span>
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{student.username || student.first_name}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Initial Pass:</span>
+                <span className="font-mono text-slate-600 dark:text-slate-400">{student.initial_password_plain || "••••"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button size="sm" variant="ghost" onClick={() => openDetail(student)} leftIcon={<Eye className="w-3.5 h-3.5" />}>
+                Details
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openEdit(student)} leftIcon={<Edit2 className="w-3.5 h-3.5" />}>
+                Edit
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => openPasswordModal(student)} leftIcon={<Key className="w-3.5 h-3.5" />}>
+                Pass
+              </Button>
+              <button
+                onClick={() => handleToggleStatus(student)}
+                className={`p-2 rounded-xl text-xs font-bold ${
+                  student.is_active ? "text-rose-600 bg-rose-50" : "text-emerald-600 bg-emerald-50"
+                }`}
+              >
+                {student.is_active ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop / Tablet Data Table */}
+      <div className="hidden md:block rounded-3xl bg-white shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
         {students.length === 0 ? (
           <div className="py-16 text-center">
             <Users className="mx-auto w-12 h-12 text-slate-300 dark:text-slate-600" />
@@ -256,9 +322,9 @@ export const StudentListView: React.FC = () => {
                   <th className="px-6 py-4">Student ID</th>
                   <th className="px-6 py-4">Student Name</th>
                   <th className="px-6 py-4">NIC</th>
+                  <th className="px-6 py-4">Tutor Monthly Fee</th>
                   <th className="px-6 py-4">Contact Details</th>
-                  <th className="px-6 py-4">Class</th>
-                  <th className="px-6 py-4">Username & Initial Pass</th>
+                  <th className="px-6 py-4">Username &amp; Initial Pass</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -283,6 +349,10 @@ export const StudentListView: React.FC = () => {
                       {student.nic}
                     </td>
 
+                    <td className="px-6 py-4 font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(student.monthly_fee || 4500)}
+                    </td>
+
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300">
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -292,10 +362,6 @@ export const StudentListView: React.FC = () => {
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
                         <span>{student.whatsapp_phone}</span>
                       </div>
-                    </td>
-
-                    <td className="px-6 py-4 text-xs font-medium text-slate-800 dark:text-slate-200">
-                      {student.course_class}
                     </td>
 
                     <td className="px-6 py-4">
@@ -405,8 +471,10 @@ export const StudentListView: React.FC = () => {
                 <p className="font-mono text-slate-800 dark:text-slate-200 font-bold">{selectedStudent.nic}</p>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-400 uppercase font-semibold">Registered Date</span>
-                <p className="text-slate-800 dark:text-slate-200 font-medium">{formatDate(selectedStudent.registration_date)}</p>
+                <span className="text-slate-400 uppercase font-semibold">Tutor Monthly Fee</span>
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                  {formatCurrency(selectedStudent.monthly_fee || 4500)}
+                </p>
               </div>
               <div className="space-y-1">
                 <span className="text-slate-400 uppercase font-semibold">Student Phone</span>
@@ -433,15 +501,6 @@ export const StudentListView: React.FC = () => {
               </p>
             </div>
 
-            {selectedStudent.additional_details && (
-              <div className="space-y-1 text-xs">
-                <span className="text-slate-400 uppercase font-semibold">Additional Details</span>
-                <p className="text-slate-800 dark:text-slate-200 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800">
-                  {selectedStudent.additional_details}
-                </p>
-              </div>
-            )}
-
             <div className="flex justify-end pt-2">
               <Button variant="secondary" onClick={() => setIsDetailModalOpen(false)}>
                 Close
@@ -456,7 +515,7 @@ export const StudentListView: React.FC = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Student Information"
-        description="Update personal or contact details"
+        description="Update personal details or customize the monthly tuition fee"
         maxWidth="lg"
       >
         <form onSubmit={handleUpdateStudent} className="space-y-4">
@@ -467,7 +526,27 @@ export const StudentListView: React.FC = () => {
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Tutor Monthly Fee (LKR)"
+              type="number"
+              min="0"
+              step="100"
+              value={editForm.monthly_fee || ""}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, monthly_fee: Number(e.target.value) }))}
+              helperText="Fee decided by Tutor"
+              leftIcon={<DollarSign className="w-4 h-4 text-emerald-500" />}
+              required
+            />
+            <Input
+              label="Course / Class"
+              value={editForm.course_class || ""}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, course_class: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Student Phone"
               value={editForm.student_phone || ""}
@@ -493,13 +572,6 @@ export const StudentListView: React.FC = () => {
             label="Address"
             value={editForm.address || ""}
             onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))}
-            required
-          />
-
-          <Input
-            label="Course / Class"
-            value={editForm.course_class || ""}
-            onChange={(e) => setEditForm((prev) => ({ ...prev, course_class: e.target.value }))}
             required
           />
 
@@ -532,7 +604,7 @@ export const StudentListView: React.FC = () => {
           />
 
           <p className="text-xs text-slate-500">
-            Once reset, the student will be required to use this new password to sign into the LMS.
+            Once reset, the student will use this new password to sign into the LMS.
           </p>
 
           <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">

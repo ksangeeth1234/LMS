@@ -28,6 +28,7 @@ export class StudentModel {
         if (!error && data) {
           return data.map((item: any) => ({
             ...item,
+            monthly_fee: Number(item.monthly_fee) || 4500.0,
             username: item.users?.username || item.first_name,
             is_active: item.is_active ?? item.users?.is_active ?? true,
           }));
@@ -78,6 +79,7 @@ export class StudentModel {
         if (!error && data) {
           return {
             ...data,
+            monthly_fee: Number(data.monthly_fee) || 4500.0,
             username: data.users?.username || data.first_name,
             is_active: data.is_active ?? data.users?.is_active ?? true,
           };
@@ -108,6 +110,7 @@ export class StudentModel {
         if (!error && data) {
           return {
             ...data,
+            monthly_fee: Number(data.monthly_fee) || 4500.0,
             username: data.users?.username || data.first_name,
             is_active: data.is_active ?? data.users?.is_active ?? true,
           };
@@ -165,7 +168,7 @@ export class StudentModel {
   }
 
   /**
-   * Create a new student and associated user account with automatic credentials
+   * Create a new student and associated user account with automatic credentials and customized tutor fee
    */
   static async create(
     input: StudentRegistrationInput,
@@ -176,6 +179,7 @@ export class StudentModel {
     const timestamp = new Date().toISOString();
     const newUserId = `u-stu-${Date.now()}`;
     const newStudentId = `s-${Date.now()}`;
+    const studentFee = Number(input.monthlyFee) > 0 ? Number(input.monthlyFee) : 4500.0;
 
     if (isSupabaseConfigured()) {
       try {
@@ -209,6 +213,7 @@ export class StudentModel {
             address: input.address,
             email: input.email || null,
             course_class: input.courseClass || "Combined Maths 2027 A/L",
+            monthly_fee: studentFee,
             registration_date: input.registrationDate || new Date().toISOString().split("T")[0],
             additional_details: input.additionalDetails || null,
             initial_password_plain: credentials.passwordPlain,
@@ -219,11 +224,11 @@ export class StudentModel {
 
         if (studentError) throw studentError;
 
-        // 3. Initialize default monthly payment record for the current/upcoming month
+        // 3. Initialize default monthly payment record with custom fee
         await supabaseAdmin.from("payments").insert({
           student_id: studentData.id,
           payment_month: "2027-01",
-          amount: 4500.0,
+          amount: studentFee,
           payment_status: "NOT PAID",
         });
 
@@ -237,12 +242,14 @@ export class StudentModel {
             student_name: studentData.full_name,
             username: credentials.username,
             course: studentData.course_class,
+            monthly_fee: studentFee,
           },
         });
 
         return {
           student: {
             ...studentData,
+            monthly_fee: studentFee,
             username: credentials.username,
           },
           credentials,
@@ -279,6 +286,7 @@ export class StudentModel {
       address: input.address,
       email: input.email,
       course_class: input.courseClass || "Combined Maths 2027 A/L",
+      monthly_fee: studentFee,
       registration_date: input.registrationDate || new Date().toISOString().split("T")[0],
       additional_details: input.additionalDetails,
       initial_password_plain: credentials.passwordPlain,
@@ -289,14 +297,14 @@ export class StudentModel {
     };
     store.students.unshift(newStudent);
 
-    // Seed default unpaid payments for this new student
+    // Seed default unpaid payments with custom fee
     const defaultMonths = ["2027-01", "2027-02", "2027-03"];
     defaultMonths.forEach((m, idx) => {
       store.payments.push({
         id: `p-new-${Date.now()}-${idx}`,
         student_id: newStudentId,
         payment_month: m,
-        amount: 4500.0,
+        amount: studentFee,
         payment_date: null,
         payment_status: "NOT PAID",
         remarks: `Tuition fee for ${m}`,
@@ -316,6 +324,7 @@ export class StudentModel {
         student_name: newStudent.full_name,
         username: credentials.username,
         course: newStudent.course_class,
+        monthly_fee: studentFee,
       },
     });
 
@@ -326,29 +335,34 @@ export class StudentModel {
   }
 
   /**
-   * Update student information
+   * Update student information including fee amount
    */
   static async update(
     id: string,
-    data: Partial<StudentRegistrationInput>,
+    data: Partial<StudentRegistrationInput & { monthly_fee?: number }>,
     adminUserId?: string
   ): Promise<Student | null> {
     if (isSupabaseConfigured()) {
       try {
+        const updatePayload: any = {
+          full_name: data.fullName,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          student_phone: data.studentPhone,
+          whatsapp_phone: data.whatsappPhone,
+          parent_phone: data.parentPhone,
+          address: data.address,
+          email: data.email,
+          course_class: data.courseClass,
+          additional_details: data.additionalDetails,
+        };
+        if (data.monthlyFee !== undefined || (data as any).monthly_fee !== undefined) {
+          updatePayload.monthly_fee = Number(data.monthlyFee || (data as any).monthly_fee);
+        }
+
         const { data: updated, error } = await supabaseAdmin
           .from("students")
-          .update({
-            full_name: data.fullName,
-            first_name: data.firstName,
-            last_name: data.lastName,
-            student_phone: data.studentPhone,
-            whatsapp_phone: data.whatsappPhone,
-            parent_phone: data.parentPhone,
-            address: data.address,
-            email: data.email,
-            course_class: data.courseClass,
-            additional_details: data.additionalDetails,
-          })
+          .update(updatePayload)
           .eq("id", id)
           .select("*, users(username, is_active)")
           .single();
@@ -364,6 +378,7 @@ export class StudentModel {
 
           return {
             ...updated,
+            monthly_fee: Number(updated.monthly_fee) || 4500.0,
             username: updated.users?.username || updated.first_name,
             is_active: updated.is_active ?? updated.users?.is_active ?? true,
           };
@@ -386,6 +401,8 @@ export class StudentModel {
     if (data.address) student.address = data.address;
     if (data.email !== undefined) student.email = data.email;
     if (data.courseClass) student.course_class = data.courseClass;
+    if (data.monthlyFee !== undefined) student.monthly_fee = Number(data.monthlyFee);
+    if ((data as any).monthly_fee !== undefined) student.monthly_fee = Number((data as any).monthly_fee);
     if (data.additionalDetails !== undefined) student.additional_details = data.additionalDetails;
     student.updated_at = new Date().toISOString();
 

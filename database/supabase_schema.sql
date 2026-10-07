@@ -66,6 +66,7 @@ CREATE TABLE students (
     address TEXT NOT NULL,
     email VARCHAR(255),
     course_class VARCHAR(100) NOT NULL DEFAULT 'Combined Maths 2027 A/L',
+    monthly_fee NUMERIC(10, 2) NOT NULL DEFAULT 4500.00,
     registration_date DATE NOT NULL DEFAULT CURRENT_DATE,
     additional_details TEXT,
     initial_password_plain VARCHAR(100), -- Stored temporarily for admin credential card upon registration

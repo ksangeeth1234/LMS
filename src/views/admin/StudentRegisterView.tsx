@@ -9,7 +9,7 @@ import {
   Check,
   KeyRound,
   ShieldCheck,
-  AlertCircle,
+  DollarSign,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/views/components/Button";
@@ -17,6 +17,7 @@ import { Input } from "@/views/components/Input";
 import { Modal } from "@/views/components/Modal";
 import { Alert } from "@/views/components/Alert";
 import { GeneratedCredentials, StudentRegistrationInput } from "@/models/types";
+import { formatCurrency } from "@/lib/utils";
 
 export const StudentRegisterView: React.FC = () => {
   const [formData, setFormData] = useState<StudentRegistrationInput>({
@@ -31,6 +32,7 @@ export const StudentRegisterView: React.FC = () => {
     address: "",
     email: "",
     courseClass: "Combined Maths 2027 A/L",
+    monthlyFee: 4500,
     registrationDate: new Date().toISOString().split("T")[0],
     additionalDetails: "",
   });
@@ -43,9 +45,8 @@ export const StudentRegisterView: React.FC = () => {
   const [generatedCreds, setGeneratedCreds] = useState<GeneratedCredentials | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  const handleChange = (field: keyof StudentRegistrationInput, value: string) => {
+  const handleChange = (field: keyof StudentRegistrationInput, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field-level error on edit
     if (errors[field]) {
       setErrors((prev) => {
         const copy = { ...prev };
@@ -55,7 +56,6 @@ export const StudentRegisterView: React.FC = () => {
     }
   };
 
-  // Auto-split first & last name when Full Name is typed
   const handleFullNameChange = (val: string) => {
     setFormData((prev) => {
       const parts = val.trim().split(/\s+/);
@@ -80,7 +80,10 @@ export const StudentRegisterView: React.FC = () => {
       const res = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          monthlyFee: Number(formData.monthlyFee) || 4500,
+        }),
       });
 
       const data = await res.json();
@@ -94,7 +97,6 @@ export const StudentRegisterView: React.FC = () => {
         return;
       }
 
-      // Show the generated credentials card modal immediately!
       setGeneratedCreds(data.credentials);
     } catch (err: any) {
       setServerError("A network error occurred while submitting the registration.");
@@ -105,7 +107,7 @@ export const StudentRegisterView: React.FC = () => {
 
   const copyToClipboard = () => {
     if (!generatedCreds) return;
-    const text = `Tuition LMS Credentials:\nStudent Name: ${generatedCreds.fullName}\nStudent ID: ${generatedCreds.studentId}\nUsername: ${generatedCreds.username}\nPassword: ${generatedCreds.passwordPlain}\nPortal URL: ${window.location.origin}/login`;
+    const text = `Tuition LMS Credentials:\nStudent Name: ${generatedCreds.fullName}\nStudent ID: ${generatedCreds.studentId}\nUsername: ${generatedCreds.username}\nPassword: ${generatedCreds.passwordPlain}\nMonthly Fee: ${formatCurrency(formData.monthlyFee || 4500)}\nPortal URL: ${window.location.origin}/login`;
     navigator.clipboard.writeText(text);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 3000);
@@ -124,6 +126,7 @@ export const StudentRegisterView: React.FC = () => {
       address: "",
       email: "",
       courseClass: "Combined Maths 2027 A/L",
+      monthlyFee: 4500,
       registrationDate: new Date().toISOString().split("T")[0],
       additionalDetails: "",
     });
@@ -131,9 +134,9 @@ export const StudentRegisterView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 px-2 sm:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <Link
             href="/admin/students"
@@ -141,11 +144,11 @@ export const StudentRegisterView: React.FC = () => {
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Student List
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Register New Student
           </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Enter student details. The system will automatically generate their username & initial password.
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Set enrollment info &amp; monthly tuition fee. The system automatically creates their username &amp; initial password.
           </p>
         </div>
       </div>
@@ -161,15 +164,15 @@ export const StudentRegisterView: React.FC = () => {
       {/* Registration Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-3xl bg-white p-8 shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 space-y-8"
+        className="rounded-3xl bg-white p-5 sm:p-8 shadow-sm border border-slate-200 dark:bg-slate-900 dark:border-slate-800 space-y-6 sm:space-y-8"
       >
-        {/* Section 1: Academic & Identification */}
+        {/* Section 1: Academic & Tuition Fee */}
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-            <span>1. Identification & Enrollment</span>
+          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <span>1. Identification &amp; Tuition Fee Configuration</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             <Input
               label="Student ID"
               placeholder="e.g. STU-2027-001"
@@ -197,16 +200,29 @@ export const StudentRegisterView: React.FC = () => {
               error={errors.courseClass}
               required
             />
+
+            <Input
+              label="Monthly Fee (LKR) *"
+              type="number"
+              min="0"
+              step="100"
+              placeholder="4500"
+              value={formData.monthlyFee || ""}
+              onChange={(e) => handleChange("monthlyFee", Number(e.target.value))}
+              helperText="Fee decided by Tutor"
+              leftIcon={<DollarSign className="w-4 h-4 text-emerald-500" />}
+              required
+            />
           </div>
         </div>
 
         {/* Section 2: Personal Details */}
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
             2. Student Personal Information
           </h3>
 
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-5">
             <Input
               label="Full Name"
               placeholder="e.g. Kavindu Sangeeth Silpage"
@@ -216,7 +232,7 @@ export const StudentRegisterView: React.FC = () => {
               required
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <Input
                 label="First Name"
                 placeholder="e.g. Kavindu"
@@ -242,11 +258,11 @@ export const StudentRegisterView: React.FC = () => {
 
         {/* Section 3: Contact Details */}
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
-            3. Contact & Communication
+          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+            3. Contact &amp; Communication
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
             <Input
               label="Student Phone"
               placeholder="e.g. 0712345678"
@@ -275,7 +291,7 @@ export const StudentRegisterView: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mt-4 sm:mt-5">
             <Input
               label="Residential Address"
               placeholder="e.g. No. 45, Temple Road, Nugegoda"
@@ -300,7 +316,7 @@ export const StudentRegisterView: React.FC = () => {
         <div>
           <Input
             label="Additional Notes / Remarks"
-            placeholder="e.g. Recommended by student batch 2026, special discount, etc."
+            placeholder="e.g. Special student discount, fast track, etc."
             value={formData.additionalDetails}
             onChange={(e) => handleChange("additionalDetails", e.target.value)}
           />
@@ -310,17 +326,17 @@ export const StudentRegisterView: React.FC = () => {
         <div className="rounded-2xl bg-indigo-50/70 border border-indigo-100 p-4 text-xs text-indigo-900 dark:bg-indigo-950/30 dark:border-indigo-900 dark:text-indigo-300 flex items-start gap-3">
           <KeyRound className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold block text-sm">Automatic Credential Generation Notice:</span>
+            <span className="font-bold block text-sm">Automatic Credential Generation:</span>
             <p className="mt-0.5 leading-relaxed">
-              Upon submitting this form, the system generates the student login username from the <strong>First Name</strong>, and the password as <strong>Last 3 chars of Last Name + &quot;@&quot; + First 3 digits of NIC</strong>. You can copy and share the credentials immediately after registration.
+              Upon submission, the system sets the username to <strong>First Name</strong>, password to <strong>Last 3 chars of Last Name + &quot;@&quot; + First 3 digits of NIC</strong>, and assigns the custom tuition fee of <strong>{formatCurrency(formData.monthlyFee || 4500)}</strong>.
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Link href="/admin/students">
-            <Button type="button" variant="outline">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <Link href="/admin/students" className="w-full sm:w-auto">
+            <Button type="button" variant="outline" className="w-full sm:w-auto">
               Cancel
             </Button>
           </Link>
@@ -329,14 +345,15 @@ export const StudentRegisterView: React.FC = () => {
             type="submit"
             variant="primary"
             isLoading={isSubmitting}
+            className="w-full sm:w-auto"
             leftIcon={<UserPlus className="w-4 h-4" />}
           >
-            Register Student & Generate Credentials
+            Register Student &amp; Generate Credentials
           </Button>
         </div>
       </form>
 
-      {/* Generated Credentials Success Modal (Section 4 Requirement) */}
+      {/* Generated Credentials Success Modal */}
       <Modal
         isOpen={Boolean(generatedCreds)}
         onClose={() => resetForm()}
@@ -345,19 +362,19 @@ export const StudentRegisterView: React.FC = () => {
         maxWidth="lg"
       >
         {generatedCreds && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200 flex items-center gap-3">
               <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <div>
-                <h4 className="font-bold text-sm">Account Created in System</h4>
+                <h4 className="font-bold text-sm">Account Enrolled in LMS</h4>
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  Student record has been saved and initial monthly payment record initialized.
+                  Monthly tuition fee configured to <strong>{formatCurrency(formData.monthlyFee || 4500)}</strong>.
                 </p>
               </div>
             </div>
 
             {/* Credential Box */}
-            <div className="rounded-2xl bg-slate-900 p-6 text-white border border-slate-800 relative overflow-hidden">
+            <div className="rounded-2xl bg-slate-900 p-5 sm:p-6 text-white border border-slate-800 relative overflow-hidden">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
                 <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" /> Student Login Credentials
@@ -367,18 +384,18 @@ export const StudentRegisterView: React.FC = () => {
                 </span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <span className="text-xs text-slate-400 block">Student Name:</span>
                   <span className="text-base font-bold text-white">{generatedCreds.fullName}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                     <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">
                       Username:
                     </span>
-                    <span className="text-lg font-mono font-bold text-indigo-400">
+                    <span className="text-base sm:text-lg font-mono font-bold text-indigo-400">
                       {generatedCreds.username}
                     </span>
                   </div>
@@ -387,14 +404,14 @@ export const StudentRegisterView: React.FC = () => {
                     <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block">
                       Password:
                     </span>
-                    <span className="text-lg font-mono font-bold text-emerald-400">
+                    <span className="text-base sm:text-lg font-mono font-bold text-emerald-400">
                       {generatedCreds.passwordPlain}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-5">
                 <Button
                   type="button"
                   variant="primary"
@@ -407,15 +424,16 @@ export const StudentRegisterView: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <Button
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => resetForm()}
               >
                 Register Another Student
               </Button>
-              <Link href="/admin/students">
-                <Button variant="primary">
+              <Link href="/admin/students" className="w-full sm:w-auto">
+                <Button variant="primary" className="w-full sm:w-auto">
                   View All Students
                 </Button>
               </Link>

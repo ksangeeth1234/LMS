@@ -20,12 +20,14 @@ import {
 import { Badge } from "@/views/components/Badge";
 import { Button } from "@/views/components/Button";
 import { Modal } from "@/views/components/Modal";
-import { formatMonthName, getUpcomingMonths, formatDate } from "@/lib/utils";
+import { formatMonthName, getAllMonthOptions, formatDate } from "@/lib/utils";
 import { LearningMaterial } from "@/models/types";
 
 export const StudentMaterialsView: React.FC = () => {
   const searchParams = useSearchParams();
-  const initialMonth = searchParams.get("month") || "2027-01";
+  const now = new Date();
+  const currentMonthCode = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const initialMonth = searchParams.get("month") || currentMonthCode;
 
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
@@ -67,25 +69,28 @@ export const StudentMaterialsView: React.FC = () => {
         </p>
       </div>
 
-      {/* Month Selection Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {getUpcomingMonths(6).map((m) => {
-          const isSelected = selectedMonth === m.code;
-          return (
-            <button
-              key={m.code}
-              onClick={() => setSelectedMonth(m.code)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
-                isSelected
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800"
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>{m.label}</span>
-            </button>
-          );
-        })}
+      {/* Month Selection Dropdown */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-indigo-500 shrink-0" />
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">Select Month:</span>
+        </div>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        >
+          {(() => {
+            const months = getAllMonthOptions();
+            const years: Record<number, typeof months> = {};
+            months.forEach((m) => { if (!years[m.year]) years[m.year] = []; years[m.year].push(m); });
+            return Object.entries(years).sort(([a],[b])=>Number(a)-Number(b)).map(([year, mons]) => (
+              <optgroup key={year} label={`── ${year} ──`}>
+                {mons.map((m) => (<option key={m.code} value={m.code}>{m.label}</option>))}
+              </optgroup>
+            ));
+          })()}
+        </select>
       </div>
 
       {/* Month Verification Status Banner */}

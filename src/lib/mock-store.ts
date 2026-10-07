@@ -18,13 +18,6 @@ declare global {
 }
 
 function initializeStore(): StoreState {
-  // Pre-hashed passwords:
-  // Admin: 'AdminPassword@123'
-  // Kavindu: 'age@200'
-  // Nimal: 'era@200'
-  // Dilani: 'ena@200'
-  // Kasun: 'ndo@200'
-  // Tharindu: 'ghe@200'
   const adminHash = bcrypt.hashSync("AdminPassword@123", 10);
   const kavinduHash = bcrypt.hashSync("age@200", 10);
   const nimalHash = bcrypt.hashSync("era@200", 10);
@@ -117,6 +110,7 @@ function initializeStore(): StoreState {
       address: "No. 45, Temple Road, Nugegoda, Colombo",
       email: "kavindu.student@gmail.com",
       course_class: "Combined Maths 2027 A/L",
+      monthly_fee: 4500.0,
       registration_date: "2026-01-05",
       initial_password_plain: "age@200",
       is_active: true,
@@ -138,6 +132,7 @@ function initializeStore(): StoreState {
       address: "No. 12/B, Galle Road, Kalutara",
       email: "nimal.p@gmail.com",
       course_class: "Combined Maths 2027 A/L",
+      monthly_fee: 4500.0,
       registration_date: "2026-01-08",
       initial_password_plain: "era@200",
       is_active: true,
@@ -159,6 +154,7 @@ function initializeStore(): StoreState {
       address: "No. 88, Kandy Road, Gampaha",
       email: "dilani.j@gmail.com",
       course_class: "Combined Maths 2027 A/L",
+      monthly_fee: 5000.0,
       registration_date: "2026-01-10",
       initial_password_plain: "ena@200",
       is_active: true,
@@ -180,6 +176,7 @@ function initializeStore(): StoreState {
       address: "No. 19, Beach Road, Negombo",
       email: "kasun.f@gmail.com",
       course_class: "Combined Maths 2027 A/L",
+      monthly_fee: 4500.0,
       registration_date: "2026-01-12",
       initial_password_plain: "ndo@200",
       is_active: true,
@@ -201,6 +198,7 @@ function initializeStore(): StoreState {
       address: "No. 104, Highlevel Road, Maharagama",
       email: "tharindu.w@gmail.com",
       course_class: "Combined Maths 2027 A/L",
+      monthly_fee: 4500.0,
       registration_date: "2026-01-15",
       initial_password_plain: "ghe@200",
       is_active: true,
@@ -316,7 +314,7 @@ function initializeStore(): StoreState {
       id: "p-06",
       student_id: "s-03",
       payment_month: "2027-01",
-      amount: 4500.0,
+      amount: 5000.0,
       payment_date: "2027-01-02T14:00:00Z",
       payment_status: "VERIFIED",
       verified_at: "2027-01-02T18:00:00Z",
@@ -489,25 +487,6 @@ Differentiate $f(x) = x^2 + 3x$ using first principles.
         created_at: "2027-02-08T09:00:00Z",
       },
     },
-    {
-      id: "mat-06",
-      payment_month: "2027-03",
-      course_class: "Combined Maths 2027 A/L",
-      title: "Week 09 – Vectors in 2D & 3D Space Master Summary",
-      description: "Vector algebra, scalar dot product, vector cross product, and geometric applications.",
-      material_type: "NOTE",
-      is_published: true,
-      created_by: "u-admin-01",
-      created_at: "2027-03-01T08:00:00Z",
-      updated_at: "2027-03-01T08:00:00Z",
-      note: {
-        id: "note-03",
-        material_id: "mat-06",
-        content: `# Chapter 3: Vectors in Space\n\n- Position Vectors: $\\vec{r} = x\\mathbf{i} + y\\mathbf{j} + z\\mathbf{k}$\n- Dot Product: $\\mathbf{a} \\cdot \\mathbf{b} = |a||b|\\cos\\theta = a_x b_x + a_y b_y + a_z b_z$\n- Cross Product: $\\mathbf{a} \\times \\mathbf{b} = |a||b|\\sin\\theta \\,\\mathbf{\\hat{n}}$`,
-        created_at: "2027-03-01T08:00:00Z",
-        updated_at: "2027-03-01T08:00:00Z",
-      },
-    },
   ];
 
   const auditLogs: AuditLog[] = [
@@ -521,25 +500,11 @@ Differentiate $f(x) = x^2 + 3x$ using first principles.
       details: {
         student_name: "Kavindu Sangeeth Silpage",
         username: "Kavindu",
+        monthly_fee: 4500,
         course: "Combined Maths 2027 A/L",
       },
       ip_address: "127.0.0.1",
       created_at: "2026-01-05T10:00:00Z",
-    },
-    {
-      id: "log-02",
-      user_id: "u-admin-01",
-      username: "admin",
-      action: "PAYMENT_VERIFIED",
-      entity_type: "PAYMENT",
-      entity_id: "p-01",
-      details: {
-        month: "2027-01",
-        student: "Kavindu Silpage",
-        amount: 4500,
-      },
-      ip_address: "127.0.0.1",
-      created_at: "2027-01-03T14:20:00Z",
     },
   ];
 

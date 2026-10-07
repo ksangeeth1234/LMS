@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
 import { getMockStore } from "@/lib/mock-store";
 import { Payment, PaymentSlip, PaymentStatus } from "./types";
 import { AuditModel } from "./audit.model";
+import { StudentModel } from "./student.model";
 
 export class PaymentModel {
   /**
@@ -34,7 +35,11 @@ export class PaymentModel {
         if (!error && data) {
           let results: Payment[] = data.map((item: any) => ({
             ...item,
-            student: item.students,
+            amount: Number(item.amount) || Number(item.students?.monthly_fee) || 4500.0,
+            student: item.students ? {
+              ...item.students,
+              monthly_fee: Number(item.students.monthly_fee) || 4500.0,
+            } : undefined,
             slip: item.payment_slips?.[0] || null,
             admin_verifier: item.admins,
           }));
@@ -64,6 +69,7 @@ export class PaymentModel {
       const admin = store.admins.find((a) => a.id === p.verified_by) || null;
       return {
         ...p,
+        amount: Number(p.amount) || Number(student?.monthly_fee) || 4500.0,
         student,
         slip,
         admin_verifier: admin,
@@ -110,7 +116,11 @@ export class PaymentModel {
         if (!error && data) {
           return {
             ...data,
-            student: data.students,
+            amount: Number(data.amount) || Number(data.students?.monthly_fee) || 4500.0,
+            student: data.students ? {
+              ...data.students,
+              monthly_fee: Number(data.students.monthly_fee) || 4500.0,
+            } : undefined,
             slip: data.payment_slips?.[0] || null,
             admin_verifier: data.admins,
           };
@@ -130,6 +140,7 @@ export class PaymentModel {
 
     return {
       ...p,
+      amount: Number(p.amount) || Number(student?.monthly_fee) || 4500.0,
       student,
       slip,
       admin_verifier: admin,
@@ -138,7 +149,6 @@ export class PaymentModel {
 
   /**
    * Check if a specific student has verified access for a given month
-   * Enforces backend access control rule (FR10)
    */
   static async isMonthVerified(studentId: string, paymentMonth: string): Promise<boolean> {
     if (isSupabaseConfigured()) {
@@ -165,7 +175,7 @@ export class PaymentModel {
   }
 
   /**
-   * Student uploads a payment slip for a specific month
+   * Student uploads a payment slip for a specific month with tutor-configured fee
    */
   static async submitPaymentSlip(
     studentId: string,
@@ -176,9 +186,16 @@ export class PaymentModel {
       fileSize?: number;
       mimeType?: string;
     },
-    amount: number = 4500.0
+    customAmount?: number
   ): Promise<Payment> {
     const timestamp = new Date().toISOString();
+    
+    // Resolve custom fee decided by tutor for this student
+    let feeAmount = customAmount;
+    if (!feeAmount || feeAmount <= 0) {
+      const student = await StudentModel.findById(studentId);
+      feeAmount = student?.monthly_fee || 4500.0;
+    }
 
     if (isSupabaseConfigured()) {
       try {
@@ -189,7 +206,7 @@ export class PaymentModel {
             {
               student_id: studentId,
               payment_month: month,
-              amount: amount,
+              amount: feeAmount,
               payment_date: timestamp,
               payment_status: "SLIP UPLOADED",
               rejection_reason: null,
@@ -224,12 +241,14 @@ export class PaymentModel {
           details: {
             student_id: studentId,
             month: month,
+            amount: feeAmount,
             file_name: slipData.fileName,
           },
         });
 
         return {
           ...payment,
+          amount: Number(payment.amount) || feeAmount,
           slip,
         };
       } catch (err) {
@@ -248,7 +267,7 @@ export class PaymentModel {
         id: `p-${Date.now()}`,
         student_id: studentId,
         payment_month: month,
-        amount: amount,
+        amount: feeAmount,
         payment_date: timestamp,
         payment_status: "SLIP UPLOADED",
         verified_at: null,
@@ -261,6 +280,7 @@ export class PaymentModel {
       store.payments.push(payment);
     } else {
       payment.payment_status = "SLIP UPLOADED";
+      payment.amount = feeAmount;
       payment.payment_date = timestamp;
       payment.rejection_reason = null;
       payment.remarks = "Slip re-submitted by student, awaiting teacher verification.";
@@ -294,6 +314,7 @@ export class PaymentModel {
       details: {
         student_id: studentId,
         month: month,
+        amount: feeAmount,
         file_name: slipData.fileName,
       },
     });

@@ -43,6 +43,7 @@ export interface Student {
   address: string;
   email?: string;
   course_class: string;
+  monthly_fee: number; // Configurable tuition fee decided by Tutor
   registration_date: string;
   additional_details?: string;
   initial_password_plain?: string;
@@ -149,6 +150,7 @@ export interface SessionUser {
   studentCode?: string; // e.g. STU-2027-001
   fullName: string;
   courseClass?: string;
+  monthlyFee?: number;
 }
 
 export interface StudentRegistrationInput {
@@ -163,6 +165,7 @@ export interface StudentRegistrationInput {
   address: string;
   email?: string;
   courseClass: string;
+  monthlyFee?: number; // Fee decided by tutor
   registrationDate: string;
   additionalDetails?: string;
 }

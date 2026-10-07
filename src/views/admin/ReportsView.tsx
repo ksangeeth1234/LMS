@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/views/components/Button";
 import { StatCard } from "@/views/components/StatCard";
-import { formatCurrency, formatMonthName, getUpcomingMonths } from "@/lib/utils";
+import { formatCurrency, formatMonthName, getAllMonthOptions } from "@/lib/utils";
 import { MonthlyReportRow } from "@/models/report.model";
 
 export const ReportsView: React.FC = () => {
@@ -145,11 +145,16 @@ export const ReportsView: React.FC = () => {
               className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
               <option value="ALL">All Available Months</option>
-              {getUpcomingMonths(6).map((m) => (
-                <option key={m.code} value={m.code}>
-                  {m.label}
-                </option>
-              ))}
+              {(() => {
+                const months = getAllMonthOptions();
+                const years: Record<number, typeof months> = {};
+                months.forEach((m) => { if (!years[m.year]) years[m.year] = []; years[m.year].push(m); });
+                return Object.entries(years).sort(([a],[b])=>Number(a)-Number(b)).map(([year, mons]) => (
+                  <optgroup key={year} label={`── ${year} ──`}>
+                    {mons.map((m) => (<option key={m.code} value={m.code}>{m.label}</option>))}
+                  </optgroup>
+                ));
+              })()}
             </select>
           </div>
         </div>
