@@ -1,9 +1,20 @@
 import type { Metadata } from "next";
+import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Tuition Class Student Management & LMS Portal",
   description: "Enterprise Systems Technologies and Architectures (IT 403061) - Model-View-Controller Tuition LMS",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Tuition LMS",
+  },
 };
 
 export default function RootLayout({
@@ -23,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className="h-full font-sans antialiased text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-950">
         {children}
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
