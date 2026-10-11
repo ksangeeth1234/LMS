@@ -2,7 +2,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase";
 import { getMockStore } from "@/lib/mock-store";
 import { Payment, PaymentSlip, PaymentStatus } from "./types";
 import { AuditModel } from "./audit.model";
-import { StudentModel } from "./student.model";
+import { StudentModel, extractMonthlyFee } from "./student.model";
 
 export class PaymentModel {
   /**
@@ -199,12 +199,27 @@ export class PaymentModel {
 
     if (isSupabaseConfigured()) {
       try {
+        // Resolve target student's UUID in Supabase
+        let targetStudentId = studentId;
+        const { data: dbStudent } = await supabaseAdmin
+          .from("students")
+          .select("id, additional_details")
+          .or(`id.eq.${studentId},student_id.eq.${studentId}`)
+          .maybeSingle();
+
+        if (dbStudent) {
+          targetStudentId = dbStudent.id;
+          if (!customAmount) {
+            feeAmount = extractMonthlyFee(dbStudent.additional_details);
+          }
+        }
+
         // Upsert payment record
         const { data: payment, error: pError } = await supabaseAdmin
           .from("payments")
           .upsert(
             {
-              student_id: studentId,
+              student_id: targetStudentId,
               payment_month: month,
               amount: feeAmount,
               payment_date: timestamp,
@@ -219,7 +234,13 @@ export class PaymentModel {
 
         if (pError) throw pError;
 
-        // Upsert slip
+        // Delete any existing slip for this payment to avoid duplicates
+        await supabaseAdmin
+          .from("payment_slips")
+          .delete()
+          .eq("payment_id", payment.id);
+
+        // Insert fresh slip
         const { data: slip, error: sError } = await supabaseAdmin
           .from("payment_slips")
           .insert({
@@ -239,7 +260,7 @@ export class PaymentModel {
           entity_type: "PAYMENT",
           entity_id: payment.id,
           details: {
-            student_id: studentId,
+            student_id: targetStudentId,
             month: month,
             amount: feeAmount,
             file_name: slipData.fileName,
@@ -251,8 +272,9 @@ export class PaymentModel {
           amount: Number(payment.amount) || feeAmount,
           slip,
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error("Supabase submitPaymentSlip error:", err);
+        throw new Error(err.message || "Failed to submit payment slip to database");
       }
     }
 

@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, LogOut, User as UserIcon, Bell, Menu } from "lucide-react";
+import { ThemeToggle } from "@/views/components/ThemeToggle";
 import { SessionUser } from "@/models/types";
 
 interface NavbarProps {
@@ -73,6 +74,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onMenuToggle }) => {
             </p>
           </div>
         </div>
+
+        {/* Theme Toggle Button */}
+        <ThemeToggle />
 
         {/* Logout Button */}
         <button

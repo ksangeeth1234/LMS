@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isOpen = false, onClose 
 
           <div className="mt-auto rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 p-4 border border-indigo-100 dark:from-slate-800 dark:to-slate-800/50 dark:border-slate-700">
             <h4 className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
-              IT 403061 – LMS System
+              PicoZen Enterprise Systems Technologies
             </h4>
             <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400">
               Enterprise MVC Architecture • Supabase PostgreSQL & Storage

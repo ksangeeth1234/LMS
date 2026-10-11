@@ -3,6 +3,19 @@ import { getMockStore } from "@/lib/mock-store";
 import { GeneratedCredentials, Student, StudentRegistrationInput } from "./types";
 import { AuditModel } from "./audit.model";
 
+export function extractMonthlyFee(additionalDetails?: string | null, rawFee?: any): number {
+  if (rawFee !== undefined && rawFee !== null && !isNaN(Number(rawFee)) && Number(rawFee) > 0) {
+    return Number(rawFee);
+  }
+  if (additionalDetails) {
+    const match = additionalDetails.match(/\[Fee:\s*(\d+(?:\.\d+)?)\]/);
+    if (match && match[1]) {
+      return Number(match[1]);
+    }
+  }
+  return 4500.0;
+}
+
 export class StudentModel {
   /**
    * Retrieve all students with optional search and filtering
@@ -28,7 +41,7 @@ export class StudentModel {
         if (!error && data) {
           return data.map((item: any) => ({
             ...item,
-            monthly_fee: Number(item.monthly_fee) || 4500.0,
+            monthly_fee: extractMonthlyFee(item.additional_details, item.monthly_fee),
             username: item.users?.username || item.first_name,
             is_active: item.is_active ?? item.users?.is_active ?? true,
           }));
@@ -79,7 +92,7 @@ export class StudentModel {
         if (!error && data) {
           return {
             ...data,
-            monthly_fee: Number(data.monthly_fee) || 4500.0,
+            monthly_fee: extractMonthlyFee(data.additional_details, data.monthly_fee),
             username: data.users?.username || data.first_name,
             is_active: data.is_active ?? data.users?.is_active ?? true,
           };
@@ -110,7 +123,7 @@ export class StudentModel {
         if (!error && data) {
           return {
             ...data,
-            monthly_fee: Number(data.monthly_fee) || 4500.0,
+            monthly_fee: extractMonthlyFee(data.additional_details, data.monthly_fee),
             username: data.users?.username || data.first_name,
             is_active: data.is_active ?? data.users?.is_active ?? true,
           };
@@ -182,6 +195,7 @@ export class StudentModel {
     const studentFee = Number(input.monthlyFee) > 0 ? Number(input.monthlyFee) : 4500.0;
 
     if (isSupabaseConfigured()) {
+      let createdUserId: string | null = null;
       try {
         // 1. Insert into users table
         const { data: userData, error: userError } = await supabaseAdmin
@@ -196,6 +210,11 @@ export class StudentModel {
           .single();
 
         if (userError) throw userError;
+        createdUserId = userData.id;
+
+        // Embed fee into additional details since students table doesn't have a direct monthly_fee column
+        const rawDetails = (input.additionalDetails || "").trim();
+        const detailsWithFee = rawDetails ? `${rawDetails} [Fee: ${studentFee}]` : `[Fee: ${studentFee}]`;
 
         // 2. Insert into students table
         const { data: studentData, error: studentError } = await supabaseAdmin
@@ -213,24 +232,31 @@ export class StudentModel {
             address: input.address,
             email: input.email || null,
             course_class: input.courseClass || "Combined Maths 2027 A/L",
-            monthly_fee: studentFee,
             registration_date: input.registrationDate || new Date().toISOString().split("T")[0],
-            additional_details: input.additionalDetails || null,
+            additional_details: detailsWithFee,
             initial_password_plain: credentials.passwordPlain,
             is_active: true,
           })
           .select()
           .single();
 
-        if (studentError) throw studentError;
+        if (studentError) {
+          if (createdUserId) {
+            await supabaseAdmin.from("users").delete().eq("id", createdUserId);
+          }
+          throw studentError;
+        }
 
-        // 3. Initialize default monthly payment record with custom fee
-        await supabaseAdmin.from("payments").insert({
-          student_id: studentData.id,
-          payment_month: "2027-01",
-          amount: studentFee,
-          payment_status: "NOT PAID",
-        });
+        // 3. Initialize default monthly payment records for 2027-01, 2027-02, 2027-03
+        const initialMonths = ["2027-01", "2027-02", "2027-03"];
+        for (const m of initialMonths) {
+          await supabaseAdmin.from("payments").insert({
+            student_id: studentData.id,
+            payment_month: m,
+            amount: studentFee,
+            payment_status: "NOT PAID",
+          });
+        }
 
         // 4. Audit Log
         await AuditModel.log({
@@ -254,8 +280,16 @@ export class StudentModel {
           },
           credentials,
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error("Supabase student create error:", err);
+        if (createdUserId) {
+          try {
+            await supabaseAdmin.from("users").delete().eq("id", createdUserId);
+          } catch (delErr) {
+            console.error("Rollback user error:", delErr);
+          }
+        }
+        throw new Error(err.message || "Failed to register student in database");
       }
     }
 
@@ -354,10 +388,13 @@ export class StudentModel {
           address: data.address,
           email: data.email,
           course_class: data.courseClass,
-          additional_details: data.additionalDetails,
         };
-        if (data.monthlyFee !== undefined || (data as any).monthly_fee !== undefined) {
-          updatePayload.monthly_fee = Number(data.monthlyFee || (data as any).monthly_fee);
+
+        if (data.additionalDetails !== undefined || data.monthlyFee !== undefined || (data as any).monthly_fee !== undefined) {
+          const fee = Number(data.monthlyFee || (data as any).monthly_fee || 4500.0);
+          const raw = (data.additionalDetails !== undefined ? data.additionalDetails : "") || "";
+          const cleaned = raw.replace(/\[Fee:\s*(\d+(?:\.\d+)?)\]/g, "").trim();
+          updatePayload.additional_details = cleaned ? `${cleaned} [Fee: ${fee}]` : `[Fee: ${fee}]`;
         }
 
         const { data: updated, error } = await supabaseAdmin
@@ -378,7 +415,7 @@ export class StudentModel {
 
           return {
             ...updated,
-            monthly_fee: Number(updated.monthly_fee) || 4500.0,
+            monthly_fee: extractMonthlyFee(updated.additional_details, updated.monthly_fee),
             username: updated.users?.username || updated.first_name,
             is_active: updated.is_active ?? updated.users?.is_active ?? true,
           };

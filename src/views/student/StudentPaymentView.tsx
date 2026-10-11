@@ -92,19 +92,61 @@ export const StudentPaymentView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setAlertInfo({ type: "error", message: "File size exceeds 5MB limit. Please upload a smaller image." });
+    if (file.size > 10 * 1024 * 1024) {
+      setAlertInfo({ type: "error", message: "File size exceeds 10MB limit. Please upload a smaller image." });
       return;
     }
 
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setFilePreview(result);
-      setFileUrl(result);
-    };
-    reader.readAsDataURL(file);
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawUrl = event.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1280;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            setFilePreview(compressed);
+            setFileUrl(compressed);
+          } else {
+            setFilePreview(rawUrl);
+            setFileUrl(rawUrl);
+          }
+        };
+        img.onerror = () => {
+          setFilePreview(rawUrl);
+          setFileUrl(rawUrl);
+        };
+        img.src = rawUrl;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        setFilePreview(result);
+        setFileUrl(result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSampleReceipt = () => {
